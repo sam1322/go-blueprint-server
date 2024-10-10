@@ -25,6 +25,11 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	r.Get("/health", s.healthHandler)
 
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Post("/url", s.GetShortenedUrl)
+	})
+	r.Get("/short/{shortKey}", s.HandleRedirect)
+
 	r.Get("/websocket", s.websocketHandler)
 
 	return r
@@ -32,6 +37,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	jsonResp, _ := json.Marshal(s.db.Health())
+	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(jsonResp)
 }
 
