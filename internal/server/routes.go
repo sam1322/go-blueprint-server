@@ -2,8 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/go-chi/jwtauth/v5"
 	"log"
 	"net/http"
+	"new_project/internal/response"
 
 	"fmt"
 	"time"
@@ -14,6 +16,17 @@ import (
 	"github.com/coder/websocket"
 )
 
+var tokenAuth *jwtauth.JWTAuth
+
+func init() {
+	tokenAuth = jwtauth.New("HS256", []byte("secret"), nil)
+
+	// For debugging/example purposes, we generate and print
+	// a sample jwt token with claims `user_id:123` here:
+	_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{"user_id": 123})
+	fmt.Printf("DEBUG: a sample jwt is %s\n\n", tokenString)
+}
+
 func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -21,9 +34,40 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	r.Use(response.JSONErrorMiddleware)
+
 	r.Get("/", s.HelloWorldHandler)
 
 	r.Get("/health", s.healthHandler)
+
+	r.Post("/login", s.Login)
+	// Protected routes
+	r.Group(func(r chi.Router) {
+		// Seek, verify and validate JWT tokens
+		r.Use(jwtauth.Verifier(tokenAuth))
+
+		// Handle valid / invalid tokens. In this example, we use
+		// the provided authenticator middleware, but you can write your
+		// own very easily, look at the Authenticator method in jwtauth.go
+		// and tweak it, its not scary.
+		r.Use(jwtauth.Authenticator(tokenAuth))
+		//r.Use(s.authenticator(tokenAuth))
+
+		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
+			_, claims, _ := jwtauth.FromContext(r.Context())
+			message := fmt.Sprintf("protected area. hi %v", claims["user_id"])
+			//w.Write([]byte())
+			resp := make(map[string]string)
+			resp["message"] = message
+			err := response.JSON(w, http.StatusOK, resp)
+			if err != nil {
+				s.serverError(w, r, err)
+			}
+			//jsonResp, _ := json.Marshal(resp)
+			//w.Header().Set("Content-Type", "application/json")
+			//_, _ = w.Write(jsonResp)
+		})
+	})
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/url", s.GetShortenedUrl)
@@ -63,5 +107,43 @@ func (s *Server) websocketHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		time.Sleep(time.Second * 2)
+	}
+}
+
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Here you should verify the username and password against your database
+	// For this example, we'll just check for a hardcoded value
+	if req.Username != "admin" || req.Password != "123456" {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	// Create the token
+	claims := map[string]interface{}{
+		"user_id": req.Username,
+	}
+	//jwtauth.SetExpiryIn(claims, time.Minute*15)
+	jwtauth.SetExpiryIn(claims, time.Hour*15)
+	jwtauth.SetIssuedNow(claims)
+
+	_, tokenString, _ := tokenAuth.Encode(claims)
+
+	// Return the token
+	//w.Header().Set("Content-Type", "application/json")
+	//json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+	err := response.JSON(w, http.StatusOK, map[string]string{"token": tokenString})
+	if err != nil {
+		s.serverError(w, r, err)
 	}
 }

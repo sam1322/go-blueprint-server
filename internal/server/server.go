@@ -2,9 +2,11 @@ package server
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -13,17 +15,19 @@ import (
 )
 
 type Server struct {
-	port int
-
-	db database.Service
+	port   int
+	db     database.Service
+	logger *slog.Logger
+	wg     sync.WaitGroup
 }
 
 func NewServer() *http.Server {
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
-
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	NewServer := &Server{
-		port: port,
-		db:   database.New(),
+		port:   port,
+		db:     database.New(),
+		logger: logger,
 	}
 
 	// Declare Server config
