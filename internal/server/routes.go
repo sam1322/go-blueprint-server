@@ -33,8 +33,24 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	//r.Use(response.JSONErrorMiddleware)
+	r.Use(response.JSONErrorMiddleware(s.logger))
 
-	r.Use(response.JSONErrorMiddleware)
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Route does not exist",
+		})
+	})
+
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Method is not valid",
+		})
+	})
 
 	r.Get("/", s.HelloWorldHandler)
 
