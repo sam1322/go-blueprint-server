@@ -56,7 +56,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	r.Get("/health", s.healthHandler)
 
-	r.Post("/login", s.Login)
+	//r.Post("/login", s.Login)
 	// Protected routes
 	r.Group(func(r chi.Router) {
 		// Seek, verify and validate JWT tokens
@@ -87,7 +87,10 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/url", s.GetShortenedUrl)
+		r.Post("/login", s.NewLogin)
+		r.Post("/register", s.Register)
 	})
+
 	r.Get("/short/{shortKey}", s.HandleRedirect)
 
 	r.Get("/websocket", s.websocketHandler)
@@ -126,11 +129,7 @@ func (s *Server) websocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
+// TODO: deprecated function
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

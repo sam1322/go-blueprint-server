@@ -22,6 +22,9 @@ type Service interface {
 	Close() error
 	GetUrlByKey(urlKey string) (*Url, error)
 	AddShortenedUrl(urlResp *Url) error
+	CountUser(username string) (int, error)
+	InsertUserByUsernameAndPassword(username, hashedPassword string) error
+	GetHashedPassword(username string) (string, error)
 }
 
 type service struct {

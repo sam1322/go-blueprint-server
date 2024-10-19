@@ -73,14 +73,13 @@ func (w *JSONResponseWriter) WriteHeader(status int) {
 
 func (w *JSONResponseWriter) Write(b []byte) (int, error) {
 	if w.status >= 400 {
-		// Remove the trailing newline if it exists
-		trimmedMessage := strings.TrimRight(string(b), "\n")
-
 		if isJSON(b) {
 			// If the body is already JSON, don't wrap it again, just send it as is.
 			w.ResponseWriter.Header().Set("Content-Type", "application/json")
 			return w.ResponseWriter.Write(b)
 		}
+		// Remove the trailing newline if it exists
+		trimmedMessage := strings.TrimRight(string(b), "\n")
 
 		// Convert error response to JSON
 		jsonError := JSONError{
