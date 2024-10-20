@@ -189,6 +189,21 @@ func (s *Server) NewLogin(w http.ResponseWriter, r *http.Request) {
 	//}
 }
 
+// Logout handles the user logout process
+func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
+	tokenString := extractTokenFromHeader(r)
+
+	err := s.db.InvalidateToken(tokenString)
+
+	// Return the token as a JSON response
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(map[string]string{"message": "Logout is successful"})
+	if err != nil {
+		http.Error(w, "Error while logging out", http.StatusBadRequest)
+	}
+
+}
+
 func (s *Server) createToken(w http.ResponseWriter, userId int) (string, error) {
 	// Create JWT claims (you can add more claims as necessary)
 	claims := map[string]interface{}{

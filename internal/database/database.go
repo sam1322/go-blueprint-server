@@ -28,6 +28,7 @@ type Service interface {
 	GetHashedPassword(username string) (int, string, error)
 	GetValidTokenCount(userID int) (int, error)
 	InvalidateOldestToken(userID int) error
+	InvalidateToken(token string) error
 	InsertToken(userID int, token string, expiresAt time.Time) error
 	IsTokenValid(token string) (bool, error)
 }

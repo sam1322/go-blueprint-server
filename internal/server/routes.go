@@ -80,6 +80,10 @@ func (s *Server) RegisterRoutes() http.Handler {
 				s.serverError(w, r, err)
 			}
 		})
+
+		r.Route("/api/p/v1", func(r chi.Router) {
+			r.Get("/logout", s.Logout)
+		})
 	})
 
 	r.Route("/api/v1", func(r chi.Router) {

@@ -26,6 +26,16 @@ func (s *service) InvalidateOldestToken(userID int) error {
 	return err
 }
 
+// InvalidateOldestToken invalidates the oldest token if the user has more than 2 valid tokens
+func (s *service) InvalidateToken(token string) error {
+	_, err := s.db.Exec(`
+		UPDATE tokens
+		SET is_valid = FALSE
+		WHERE token=$1
+	`, token)
+	return err
+}
+
 // GetValidTokenCount returns the number of valid tokens for a user
 func (s *service) GetValidTokenCount(userID int) (int, error) {
 	var count int
