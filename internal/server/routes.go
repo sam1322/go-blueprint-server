@@ -66,22 +66,19 @@ func (s *Server) RegisterRoutes() http.Handler {
 		// the provided authenticator middleware, but you can write your
 		// own very easily, look at the Authenticator method in jwtauth.go
 		// and tweak it, its not scary.
-		r.Use(jwtauth.Authenticator(tokenAuth))
-		//r.Use(s.authenticator(tokenAuth))
+		//r.Use(jwtauth.Authenticator(tokenAuth))
+		r.Use(s.authenticator())
 
 		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
 			_, claims, _ := jwtauth.FromContext(r.Context())
 			message := fmt.Sprintf("protected area. hi %v", claims["user_id"])
-			//w.Write([]byte())
+
 			resp := make(map[string]string)
 			resp["message"] = message
 			err := response.JSON(w, http.StatusOK, resp)
 			if err != nil {
 				s.serverError(w, r, err)
 			}
-			//jsonResp, _ := json.Marshal(resp)
-			//w.Header().Set("Content-Type", "application/json")
-			//_, _ = w.Write(jsonResp)
 		})
 	})
 

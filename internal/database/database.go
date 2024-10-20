@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
@@ -23,8 +24,12 @@ type Service interface {
 	GetUrlByKey(urlKey string) (*Url, error)
 	AddShortenedUrl(urlResp *Url) error
 	CountUser(username string) (int, error)
-	InsertUserByUsernameAndPassword(username, hashedPassword string) error
-	GetHashedPassword(username string) (string, error)
+	InsertUserByUsernameAndPassword(username, hashedPassword string) (int, error)
+	GetHashedPassword(username string) (int, string, error)
+	GetValidTokenCount(userID int) (int, error)
+	InvalidateOldestToken(userID int) error
+	InsertToken(userID int, token string, expiresAt time.Time) error
+	IsTokenValid(token string) (bool, error)
 }
 
 type service struct {
