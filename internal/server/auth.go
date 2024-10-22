@@ -1,10 +1,14 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/markbates/goth/gothic"
 	"golang.org/x/crypto/bcrypt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -57,21 +61,6 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 
 	// Return success response
 	w.WriteHeader(http.StatusCreated)
-	//claims := map[string]interface{}{
-	//	"user_id": req.Username, // or a real user ID
-	//}
-
-	// Set expiry and issued time for the token
-	//jwtauth.SetExpiryIn(claims, time.Hour*15) // Token valid for 15 hours
-	//jwtauth.SetIssuedNow(claims)
-	//
-	//// Encode the claims into a signed JWT token
-	//_, tokenString, err := tokenAuth.Encode(claims)
-	//if err != nil {
-	//	http.Error(w, "Error generating token", http.StatusInternalServerError)
-	//	return
-	//}
-
 	fmt.Println("userID ", userID)
 	tokenString, err := s.createToken(w, userID)
 	fmt.Println("token", tokenString)
@@ -132,41 +121,6 @@ func (s *Server) NewLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Password matches, login is successful
 	w.WriteHeader(http.StatusOK)
-	// Create JWT claims (you can add more claims as necessary)
-	//claims := map[string]interface{}{
-	//	"user_id": req.Username, // or a real user ID
-	//}
-	//
-	//// Set expiry and issued time for the token
-	//jwtauth.SetExpiryIn(claims, time.Hour*15) // Token valid for 15 hours
-	//jwtauth.SetIssuedNow(claims)
-	//
-	//// Encode the claims into a signed JWT token
-	//_, tokenString, err := tokenAuth.Encode(claims)
-	//if err != nil {
-	//	http.Error(w, "Error generating token", http.StatusInternalServerError)
-	//	return
-	//}
-	//
-	//// Check if user already has 2 valid tokens
-	//tokenCount, err := s.db.GetValidTokenCount(userID)
-	//if err != nil {
-	//	http.Error(w, "Error checking token count", http.StatusInternalServerError)
-	//	return
-	//}
-	//
-	//// If user has 2 tokens, invalidate the oldest one
-	//if tokenCount >= 2 {
-	//	err = s.db.InvalidateOldestToken(userID)
-	//	if err != nil {
-	//		http.Error(w, "Error invalidating oldest token", http.StatusInternalServerError)
-	//		return
-	//	}
-	//}
-	//
-	//// Insert the new token into the database
-	//expiresAt := time.Now().Add(time.Hour * 15)
-	//err = s.db.InsertToken(userID, tokenString, expiresAt)
 	fmt.Println("userId ", userID)
 	tokenString, err := s.createToken(w, userID)
 	fmt.Println("token ", tokenString)
@@ -181,12 +135,6 @@ func (s *Server) NewLogin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 	}
-
-	//
-	//err = json.NewEncoder(w).Encode(map[string]string{"message": "Login successful"})
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//}
 }
 
 // Logout handles the user logout process
@@ -302,4 +250,44 @@ func extractTokenFromHeader(r *http.Request) string {
 		return strArr[1]
 	}
 	return ""
+}
+
+func (s *Server) getAuthCallbackFunction(w http.ResponseWriter, r *http.Request) {
+	provider := chi.URLParam(r, "provider")
+	r = r.WithContext(context.WithValue(context.Background(), "provider", provider))
+	user, err := gothic.CompleteUserAuth(w, r)
+	if err != nil {
+		log.Println("something", err)
+		fmt.Fprintln(w, err)
+		return
+	}
+	fmt.Println(user)
+	postJsonBytes, err := json.MarshalIndent(user, "", "    ")
+	// postJsonBytes, err := JSONMarshal(postJson, "", "    ")
+	if err != nil {
+		fmt.Fprintln(w, err)
+	}
+	fmt.Println(string(postJsonBytes))
+	//http.Redirect(w, r, "http://localhost:3000/movies/dashboard", http.StatusFound)
+	http.Redirect(w, r, "http://localhost:3000/", http.StatusFound)
+
+}
+
+func (s *Server) beginAuthProvideCallback(w http.ResponseWriter, r *http.Request) {
+
+	provider := chi.URLParam(r, "provider")
+
+	r = r.WithContext(context.WithValue(context.Background(), "provider", provider))
+
+	gothic.BeginAuthHandler(w, r)
+}
+
+func (s *Server) logOutProvider(w http.ResponseWriter, r *http.Request) {
+	provider := chi.URLParam(r, "provider")
+
+	r = r.WithContext(context.WithValue(context.Background(), "provider", provider))
+
+	gothic.Logout(w, r)
+	w.Header().Set("Location", "http://localhost:3000/movies/login")
+	w.WriteHeader(http.StatusTemporaryRedirect)
 }

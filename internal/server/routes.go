@@ -90,7 +90,14 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Post("/url", s.GetShortenedUrl)
 		r.Post("/login", s.NewLogin)
 		r.Post("/register", s.Register)
+
 	})
+
+	//r.Route("/api", func(r chi.Router) {
+	r.Get("/auth/{provider}/callback", s.getAuthCallbackFunction)
+	r.Get("/auth/{provider}", s.beginAuthProvideCallback)
+	r.Get("/logout/{provider}", s.logOutProvider)
+	//})
 
 	r.Get("/short/{shortKey}", s.HandleRedirect)
 
