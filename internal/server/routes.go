@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
 	"log"
 	"net/http"
@@ -34,6 +35,17 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	//r.Use(response.JSONErrorMiddleware)
+	r.Use(cors.Handler(cors.Options{
+		// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
+		AllowedOrigins: []string{"https://*", "http://*"},
+		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	}))
+
 	r.Use(response.JSONErrorMiddleware(s.logger))
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
@@ -83,6 +95,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 		r.Route("/api/p/v1", func(r chi.Router) {
 			r.Get("/logout", s.Logout)
+			r.Get("/user", s.GetUserDetailsByUserId)
 		})
 	})
 
@@ -90,7 +103,6 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Post("/url", s.GetShortenedUrl)
 		r.Post("/login", s.NewLogin)
 		r.Post("/register", s.Register)
-
 	})
 
 	//r.Route("/api", func(r chi.Router) {

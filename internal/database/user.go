@@ -3,9 +3,8 @@ package database
 import "time"
 
 type User struct {
-	ID        int       `json:"id"`
+	Id        string    `json:"id"`
 	Username  string    `json:"username"`
-	Password  string    `json:"password"`
 	Fullname  string    `json:"fullname"`
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
@@ -19,25 +18,34 @@ func (s *service) CountUser(username string) (int, error) {
 	return count, err
 }
 
-func (s *service) InsertUserByUsernameAndPassword(username, hashedPassword string) (int, error) {
+func (s *service) InsertUserByUsernameAndPassword(username, hashedPassword string) (string, error) {
 	// Insert the new user into the database
 	fullName := username
 	role := "USER"
-	var userID int
+	var userID string
 	err := s.db.QueryRow("INSERT INTO users (username, password, fullname, role) VALUES ($1, $2, $3, $4) RETURNING id", username, hashedPassword, fullName, role).Scan(&userID)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	return userID, nil
 }
 
 // GetHashedPassword retrieves the hashed password for a given username from the database
-func (s *service) GetHashedPassword(username string) (int, string, error) {
+func (s *service) GetHashedPassword(username string) (string, string, error) {
 	var hashedPassword string
-	var userID int
+	var userID string
 	err := s.db.QueryRow("SELECT id, password FROM users WHERE username = $1", username).Scan(&userID, &hashedPassword)
 	if err != nil {
-		return 0, "", err
+		return "", "", err
 	}
 	return userID, hashedPassword, nil
+}
+
+func (s *service) GetUserById(userId string) (*User, error) {
+	var user User
+	err := s.db.QueryRow("SELECT id, username, fullname,role,created_at,updated_at FROM users WHERE id = $1", userId).Scan(&user.Id, &user.Username, &user.Fullname, &user.Role, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }

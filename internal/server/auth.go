@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
@@ -10,6 +11,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
+	"new_project/internal/response"
 	"strings"
 	"time"
 )
@@ -152,7 +154,7 @@ func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s *Server) createToken(w http.ResponseWriter, userId int) (string, error) {
+func (s *Server) createToken(w http.ResponseWriter, userId string) (string, error) {
 	// Create JWT claims (you can add more claims as necessary)
 	claims := map[string]interface{}{
 		//"user_id": username, // or a real user ID
@@ -257,11 +259,10 @@ func (s *Server) getAuthCallbackFunction(w http.ResponseWriter, r *http.Request)
 	r = r.WithContext(context.WithValue(context.Background(), "provider", provider))
 	user, err := gothic.CompleteUserAuth(w, r)
 	if err != nil {
-		log.Println("something", err)
+		log.Printf("error in user authentication %v : %v", provider, err)
 		fmt.Fprintln(w, err)
 		return
 	}
-	fmt.Println(user)
 	postJsonBytes, err := json.MarshalIndent(user, "", "    ")
 	// postJsonBytes, err := JSONMarshal(postJson, "", "    ")
 	if err != nil {
@@ -269,8 +270,28 @@ func (s *Server) getAuthCallbackFunction(w http.ResponseWriter, r *http.Request)
 	}
 	fmt.Println(string(postJsonBytes))
 	//http.Redirect(w, r, "http://localhost:3000/movies/dashboard", http.StatusFound)
-	http.Redirect(w, r, "http://localhost:3000/", http.StatusFound)
 
+	tokenString, err := s.RegisterOrLogin(w, user.Email)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error creating token: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Create and set the cookie
+	cookie := &http.Cookie{
+		Name:   "token",
+		Value:  tokenString,
+		Path:   "/",
+		MaxAge: 86400, // 24 hours in seconds
+		//HttpOnly: true,  // Cannot be accessed by JavaScript (more secure)
+		HttpOnly: false, // Cannot be accessed by JavaScript (more secure)
+		Secure:   true,  // Only sent over HTTPS
+		SameSite: http.SameSiteLaxMode,
+		Domain:   "localhost", // Change this in production
+	}
+	http.SetCookie(w, cookie)
+
+	http.Redirect(w, r, "http://localhost:3000/", http.StatusFound)
 }
 
 func (s *Server) beginAuthProvideCallback(w http.ResponseWriter, r *http.Request) {
@@ -290,4 +311,78 @@ func (s *Server) logOutProvider(w http.ResponseWriter, r *http.Request) {
 	gothic.Logout(w, r)
 	w.Header().Set("Location", "http://localhost:3000/movies/login")
 	w.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+func (s *Server) RegisterOrLogin(w http.ResponseWriter, username string) (string, error) {
+	count, err := s.db.CountUser(username)
+	if err != nil {
+		//http.Error(w, fmt.Sprintf("Error checking username availability: %v", err), http.StatusInternalServerError)
+		return "", err
+	}
+
+	userID := ""
+	if count > 0 {
+		// signin in the user
+		// Retrieve the stored hashed password for the username
+		userID, _, err = s.db.GetHashedPassword(username)
+		if err != nil {
+			return "", err
+		}
+
+	} else { // registering the user for the first time
+
+		randomPassword := generateSecureRandomString(12)
+		if err != nil {
+			return "", err
+		}
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(randomPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return "", err
+		}
+
+		// Insert the new user into the database
+		userID, err = s.db.InsertUserByUsernameAndPassword(username, string(hashedPassword))
+		if err != nil {
+			return "", err
+		}
+
+	}
+	if strings.TrimSpace(userID) == "" {
+		return "", fmt.Errorf("Invalid username or password")
+	}
+
+	// Return success response
+	fmt.Println("userID ", userID)
+	tokenString, err := s.createToken(w, userID)
+	fmt.Println("token", tokenString)
+
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
+}
+
+// Secure method using crypto/rand
+func generateSecureRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, length)
+	rand.Read(b)
+	for i := range b {
+		b[i] = charset[b[i]%byte(len(charset))]
+	}
+	return string(b)
+}
+
+func (s *Server) GetUserDetailsByUserId(w http.ResponseWriter, r *http.Request) {
+	_, claims, _ := jwtauth.FromContext(r.Context())
+	//message := fmt.Sprintf("protected area. hi %v", claims["user_id"])
+	userId := claims["user_id"].(string)
+
+	user, err := s.db.GetUserById(userId)
+	err = response.JSON(w, http.StatusOK, user)
+	if err != nil {
+		s.serverError(w, r, err)
+	}
 }

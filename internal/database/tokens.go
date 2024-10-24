@@ -5,13 +5,13 @@ import (
 )
 
 // InsertToken stores a token in the database for the user
-func (s *service) InsertToken(userID int, token string, expiresAt time.Time) error {
+func (s *service) InsertToken(userID string, token string, expiresAt time.Time) error {
 	_, err := s.db.Exec("INSERT INTO tokens (user_id, token, expires_at) VALUES ($1, $2, $3)", userID, token, expiresAt)
 	return err
 }
 
 // InvalidateOldestToken invalidates the oldest token if the user has more than 2 valid tokens
-func (s *service) InvalidateOldestToken(userID int) error {
+func (s *service) InvalidateOldestToken(userID string) error {
 	_, err := s.db.Exec(`
 		UPDATE tokens
 		SET is_valid = FALSE
@@ -37,7 +37,7 @@ func (s *service) InvalidateToken(token string) error {
 }
 
 // GetValidTokenCount returns the number of valid tokens for a user
-func (s *service) GetValidTokenCount(userID int) (int, error) {
+func (s *service) GetValidTokenCount(userID string) (int, error) {
 	var count int
 	err := s.db.QueryRow("SELECT COUNT(*) FROM tokens WHERE user_id = $1 AND is_valid = TRUE", userID).Scan(&count)
 	return count, err

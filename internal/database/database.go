@@ -24,12 +24,13 @@ type Service interface {
 	GetUrlByKey(urlKey string) (*Url, error)
 	AddShortenedUrl(urlResp *Url) error
 	CountUser(username string) (int, error)
-	InsertUserByUsernameAndPassword(username, hashedPassword string) (int, error)
-	GetHashedPassword(username string) (int, string, error)
-	GetValidTokenCount(userID int) (int, error)
-	InvalidateOldestToken(userID int) error
+	InsertUserByUsernameAndPassword(username, hashedPassword string) (string, error)
+	GetHashedPassword(username string) (string, string, error)
+	GetUserById(userId string) (*User, error)
+	GetValidTokenCount(userID string) (int, error)
+	InvalidateOldestToken(userID string) error
 	InvalidateToken(token string) error
-	InsertToken(userID int, token string, expiresAt time.Time) error
+	InsertToken(userID string, token string, expiresAt time.Time) error
 	IsTokenValid(token string) (bool, error)
 }
 
