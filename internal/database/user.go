@@ -5,7 +5,8 @@ import "time"
 type User struct {
 	Id        string    `json:"id"`
 	Username  string    `json:"username"`
-	Fullname  string    `json:"fullname"`
+	FullName  string    `json:"full_name"`
+	UserImage string    `json:"user_image"`
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -30,6 +31,19 @@ func (s *service) InsertUserByUsernameAndPassword(username, hashedPassword strin
 	return userID, nil
 }
 
+func (s *service) UpdateUserImageById(userImage, userId string) error {
+	// Insert the new user into the database
+	_, err := s.db.Exec(
+		"UPDATE users SET userimage = $1 WHERE id = $2",
+		userImage, userId,
+	)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // GetHashedPassword retrieves the hashed password for a given username from the database
 func (s *service) GetHashedPassword(username string) (string, string, error) {
 	var hashedPassword string
@@ -43,7 +57,7 @@ func (s *service) GetHashedPassword(username string) (string, string, error) {
 
 func (s *service) GetUserById(userId string) (*User, error) {
 	var user User
-	err := s.db.QueryRow("SELECT id, username, fullname,role,created_at,updated_at FROM users WHERE id = $1", userId).Scan(&user.Id, &user.Username, &user.Fullname, &user.Role, &user.CreatedAt, &user.UpdatedAt)
+	err := s.db.QueryRow("SELECT id, username, fullname,userimage, role,created_at,updated_at FROM users WHERE id = $1", userId).Scan(&user.Id, &user.Username, &user.FullName, &user.UserImage, &user.Role, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}

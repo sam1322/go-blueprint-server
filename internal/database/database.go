@@ -25,6 +25,7 @@ type Service interface {
 	AddShortenedUrl(urlResp *Url) error
 	CountUser(username string) (int, error)
 	InsertUserByUsernameAndPassword(username, hashedPassword string) (string, error)
+	UpdateUserImageById(userImage, userId string) error
 	GetHashedPassword(username string) (string, string, error)
 	GetUserById(userId string) (*User, error)
 	GetValidTokenCount(userID string) (int, error)

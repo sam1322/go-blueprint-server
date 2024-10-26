@@ -270,9 +270,9 @@ func (s *Server) getAuthCallbackFunction(w http.ResponseWriter, r *http.Request)
 	}
 	fmt.Println(string(postJsonBytes))
 	//http.Redirect(w, r, "http://localhost:3000/movies/dashboard", http.StatusFound)
-
-	tokenString, err := s.RegisterOrLogin(w, user.Email)
+	tokenString, err := s.RegisterOrLogin(w, user.Email, user.AvatarURL)
 	if err != nil {
+		// TODO: redirect to proper page with a error message in query params
 		http.Error(w, fmt.Sprintf("Error creating token: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -313,7 +313,10 @@ func (s *Server) logOutProvider(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func (s *Server) RegisterOrLogin(w http.ResponseWriter, username string) (string, error) {
+func (s *Server) RegisterOrLogin(w http.ResponseWriter, username string, userImage string) (string, error) {
+	if strings.TrimSpace(username) == "" {
+		return "", fmt.Errorf("Invalid username")
+	}
 	count, err := s.db.CountUser(username)
 	if err != nil {
 		//http.Error(w, fmt.Sprintf("Error checking username availability: %v", err), http.StatusInternalServerError)
@@ -332,10 +335,6 @@ func (s *Server) RegisterOrLogin(w http.ResponseWriter, username string) (string
 	} else { // registering the user for the first time
 
 		randomPassword := generateSecureRandomString(12)
-		if err != nil {
-			return "", err
-		}
-
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(randomPassword), bcrypt.DefaultCost)
 		if err != nil {
 			return "", err
@@ -347,9 +346,16 @@ func (s *Server) RegisterOrLogin(w http.ResponseWriter, username string) (string
 			return "", err
 		}
 
+		if strings.TrimSpace(userImage) != "" {
+			err = s.db.UpdateUserImageById(userImage, userID)
+		}
+		if err != nil {
+			return "", err
+		}
+
 	}
 	if strings.TrimSpace(userID) == "" {
-		return "", fmt.Errorf("Invalid username or password")
+		return "", fmt.Errorf("invalid username or password")
 	}
 
 	// Return success response
