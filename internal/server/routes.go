@@ -96,6 +96,10 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Route("/api/p/v1", func(r chi.Router) {
 			r.Get("/logout", s.Logout)
 			r.Get("/user", s.GetUserDetailsByUserId)
+
+			r.Post("/workspace", s.AddWorkspace)
+			r.Get("/workspace", s.GetAllWorkspace)
+			r.Get("/workspace/{workspaceId}", s.GetWorkspaceById)
 		})
 	})
 
@@ -103,6 +107,10 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Post("/url", s.GetShortenedUrl)
 		r.Post("/login", s.NewLogin)
 		r.Post("/register", s.Register)
+
+		r.Post("/animal", s.AddAnimals)
+		r.Get("/animal/{id}", s.GetAnimalsById)
+		r.Get("/animal", s.GetAllAnimals)
 	})
 
 	//r.Route("/api", func(r chi.Router) {

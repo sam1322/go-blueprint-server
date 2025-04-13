@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"new_project/internal/models"
 	"os"
 	"time"
 
@@ -23,16 +24,31 @@ type Service interface {
 	Close() error
 	GetUrlByKey(urlKey string) (*Url, error)
 	AddShortenedUrl(urlResp *Url) error
+
+	// User Table -----------------------------------
 	CountUser(username string) (int, error)
 	InsertUserByUsernameAndPassword(username, hashedPassword string) (string, error)
 	UpdateUserImageById(userImage, userId string) error
 	GetHashedPassword(username string) (string, string, error)
 	GetUserById(userId string) (*User, error)
+
+	//Token ------------------------------------
 	GetValidTokenCount(userID string) (int, error)
 	InvalidateOldestToken(userID string) error
 	InvalidateToken(token string) error
 	InsertToken(userID string, token string, expiresAt time.Time) error
 	IsTokenValid(token string) (bool, error)
+
+	//Animals Table --------------------------------------
+	GetAnimalById(id string) (*Animal, error)
+	InsertAnimal(animalResp *Animal) error
+	DeleteByID(id int) error
+	GetAllAnimals(page, pageSize int) (*AnimalsResponse, error)
+
+	//Workspace ------------------------------------------
+	AddWorkspace(userId string, name string, joinCode string) error
+	GetWorkspaces(userId string) ([]models.Workspace, error)
+	GetWorkspacesById(userId, workspaceId string) (*models.Workspace, error)
 }
 
 type service struct {

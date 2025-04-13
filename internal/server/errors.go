@@ -24,7 +24,7 @@ func (app *Server) reportServerError(r *http.Request, err error) {
 func (app *Server) errorMessage(w http.ResponseWriter, r *http.Request, status int, message string, headers http.Header) {
 	message = strings.ToUpper(message[:1]) + message[1:]
 
-	err := response.JSONWithHeaders(w, status, map[string]string{"Error": message}, headers)
+	err := response.JSONWithHeaders(w, status, map[string]string{"message": message}, headers)
 	if err != nil {
 		app.reportServerError(r, err)
 		w.WriteHeader(http.StatusInternalServerError)

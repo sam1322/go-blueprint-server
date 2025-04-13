@@ -1,6 +1,9 @@
 package database
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type User struct {
 	Id        string    `json:"id"`
@@ -57,9 +60,14 @@ func (s *service) GetHashedPassword(username string) (string, string, error) {
 
 func (s *service) GetUserById(userId string) (*User, error) {
 	var user User
-	err := s.db.QueryRow("SELECT id, username, fullname,userimage, role,created_at,updated_at FROM users WHERE id = $1", userId).Scan(&user.Id, &user.Username, &user.FullName, &user.UserImage, &user.Role, &user.CreatedAt, &user.UpdatedAt)
+	var userImage sql.NullString
+	err := s.db.QueryRow("SELECT id, username, fullname,userimage, role,created_at,updated_at FROM users WHERE id = $1", userId).Scan(&user.Id, &user.Username, &user.FullName, &userImage, &user.Role, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
+	if userImage.Valid {
+		user.UserImage = userImage.String
+	}
+
 	return &user, nil
 }

@@ -30,7 +30,7 @@ func (s *Server) GetShortenedUrl(w http.ResponseWriter, r *http.Request) {
 		log.Panicf("error handling JSON marshal. Err: %v", err)
 	}
 	longUrl := request.Url
-	shortKey := generateShortKey()
+	shortKey := generateShortKey(8)
 
 	// TODO : add validations for long url
 
@@ -80,9 +80,9 @@ func (s *Server) HandleRedirect(w http.ResponseWriter, r *http.Request) {
 	//_, _ = w.Write(jsonResp)
 }
 
-func generateShortKey() string {
+func generateShortKey(keyLength int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	const keyLength = 8
+	//const keyLength = 8
 
 	rand.Seed(time.Now().UnixNano())
 	shortKey := make([]byte, keyLength)

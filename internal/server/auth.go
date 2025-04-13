@@ -103,7 +103,8 @@ func (s *Server) NewLogin(w http.ResponseWriter, r *http.Request) {
 	userID, hashedPassword, err := s.db.GetHashedPassword(req.Username)
 	if err != nil {
 		//http.Error(w, fmt.Sprintf("Error retrieving user: %v", err), http.StatusInternalServerError)
-		http.Error(w, fmt.Sprintf("User not found"), http.StatusNotFound)
+		//http.Error(w, fmt.Sprintf("Invalid username or password"), http.StatusBadRequest)
+		s.badRequest(w, r, fmt.Errorf("invalid username or password"))
 		return
 	}
 
@@ -117,7 +118,8 @@ func (s *Server) NewLogin(w http.ResponseWriter, r *http.Request) {
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(req.Password))
 	if err != nil {
 		// Password does not match
-		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+		//http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+		s.badRequest(w, r, fmt.Errorf("invalid username or password"))
 		return
 	}
 
@@ -387,6 +389,9 @@ func (s *Server) GetUserDetailsByUserId(w http.ResponseWriter, r *http.Request) 
 	userId := claims["user_id"].(string)
 
 	user, err := s.db.GetUserById(userId)
+	if err != nil {
+		s.badRequest(w, r, err)
+	}
 	err = response.JSON(w, http.StatusOK, user)
 	if err != nil {
 		s.serverError(w, r, err)
